@@ -1,4 +1,4 @@
-FROM golang:1.13.4-buster
-RUN go get github.com/cespare/reflex
+FROM golang:1.18.1-stretch
+RUN go install github.com/cespare/reflex@latest
 WORKDIR /app
 ENTRYPOINT ["reflex", "-c", "reflex.conf"]
