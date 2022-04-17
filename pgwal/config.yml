@@ -9,7 +9,7 @@ logger:
 database:
   host: db
   port: 5432
-  name: test
+  name: app
   user: user
   debug: false
   password: pass

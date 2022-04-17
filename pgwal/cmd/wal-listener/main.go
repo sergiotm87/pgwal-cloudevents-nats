@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nats-io/stan.go"
+	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
@@ -46,7 +46,7 @@ func main() {
 
 			initLogger(cfg.Logger)
 
-			sc, err := stan.Connect(cfg.Nats.ClusterID, cfg.Nats.ClientID, stan.NatsURL(cfg.Nats.Address))
+			nc, err := nats.Connect(cfg.Nats.Address)
 			if err != nil {
 				return fmt.Errorf("nats connection: %w", err)
 			}
@@ -60,7 +60,7 @@ func main() {
 				cfg,
 				listener.NewRepository(conn),
 				rConn,
-				listener.NewNatsPublisher(sc),
+				listener.NewNatsPublisher(*nc),
 				listener.NewBinaryParser(binary.BigEndian),
 			)
 

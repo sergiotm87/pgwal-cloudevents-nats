@@ -5,19 +5,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nats-io/stan.go"
+	"github.com/nats-io/nats.go"
 )
 
 //go:generate  easyjson nats_publisher.go
 
 // NatsPublisher represent event publisher.
 type NatsPublisher struct {
-	conn stan.Conn
+	conn nats.Conn
 }
 
 // Close NATS connection.
-func (n NatsPublisher) Close() error {
-	return n.conn.Close()
+func (nc NatsPublisher) Close() error {
+	return nc.Close()
 }
 
 // Event event structure for publishing to the NATS server.
@@ -42,7 +42,7 @@ func (n NatsPublisher) Publish(subject string, event Event) error {
 }
 
 // NewNatsPublisher return new NatsPublisher instance.
-func NewNatsPublisher(conn stan.Conn) *NatsPublisher {
+func NewNatsPublisher(conn nats.Conn) *NatsPublisher {
 	return &NatsPublisher{conn: conn}
 }
 
