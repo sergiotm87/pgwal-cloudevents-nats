@@ -7,10 +7,10 @@ logger:
   level: info
   humanReadable: true
 database:
-  host: localhost
+  host: db
   port: 5432
-  name: test_db
-  user: back
+  name: test
+  user: user
   debug: false
   password: pass
   filter:
@@ -19,7 +19,7 @@ database:
         - insert
         - update
 nats:
-  address: localhost:4222
+  address: nats:4222
   clusterID: test-cluster
   clientID: wal-listener
   topicPrefix: "pre"

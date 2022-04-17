@@ -1,8 +1,4 @@
-FROM alpine:3.10
-MAINTAINER Konstantin Makarov <hippik80@gmail.com>
-RUN adduser -D developer
+FROM golang:1.13.4-buster
+RUN go get github.com/cespare/reflex
 WORKDIR /app
-COPY wal-listener .
-USER developer
-
-ENTRYPOINT ["./wal-listener"]
+ENTRYPOINT ["reflex", "-c", "reflex.conf"]

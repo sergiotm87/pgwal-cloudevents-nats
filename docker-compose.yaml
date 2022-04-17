@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+
+  nats:
+    image: nats:latest
+    command: -js
+    ports:
+      - 4222:4222
+    environment:
+      - FOO=BAR
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: test
+
+  publisher:
+    build: .
+    volumes:
+      - ./pgwal:/app
+    env_file:
+      - .env
+    ports:
+      - 5000:5000
