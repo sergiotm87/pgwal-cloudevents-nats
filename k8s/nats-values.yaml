@@ -1,0 +1,12 @@
+nats:
+  jetstream:
+    enabled: true
+    #domain:
+    fileStorage:
+      size: 1Gi
+natsbox:
+  enabled: true
+reloader:
+  enabled: true
+exporter:
+  enabled: false
