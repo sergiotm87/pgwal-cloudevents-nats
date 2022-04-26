@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgwalstreams-config
+  labels:
+    app.kubernetes.io/name: pgwalstreams
+data:
+  config.yml: |-
+    listener:
+      slotName: myslot_1
+      refreshConnection: 30s
+      heartbeatInterval: 10s
+    logger:
+      caller: false
+      level: info
+      humanReadable: true
+    database:
+      host: postgresql
+      port: 5432
+      name: app
+      user: user
+      debug: false
+      password: pass
+      filter:
+        tables:
+          users:
+            - insert
+            - update
+    nats:
+      address: nats:4222
+      clusterID: test-cluster
+      clientID: pgwalstreams
+      topicPrefix: db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgwalstreams
+  labels:
+    app.kubernetes.io/name: pgwalstreams
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgwalstreams
+  template:
+    metadata:
+      labels:
+        app: pgwalstreams
+    spec:
+      containers:
+      - image: ghcr.io/sergiotm87/pgwalstreams:latest
+        name: pgwalstreams
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: config
+          mountPath: /conf
+      volumes:
+        - name: config
+          configMap:
+            name: pgwalstreams-config

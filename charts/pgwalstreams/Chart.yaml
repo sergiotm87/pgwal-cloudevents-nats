@@ -1,0 +1,25 @@
+annotations:
+  category: Infrastructure
+apiVersion: v2
+appVersion: 0.1.0
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    tags:
+      - bitnami-common
+    version: 1.x.x
+description: Stream changes from postgres to nats jetstream
+engine: gotpl
+home: 
+keywords:
+  - pgwal
+  - eventsourcing
+  - postgres
+  - nats
+maintainers:
+  - email: sergiotm87@gmail.com
+    name: Kammin
+name: pgwalstreams
+sources:
+  - https://github.com/sergiotm87/pgwalstreams
+version: 0.1.0

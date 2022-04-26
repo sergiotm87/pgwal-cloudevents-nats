@@ -1,0 +1,16 @@
+auth:
+  postgresPassword: secret
+  username: user
+  password: pass
+  database: app
+fullnameOverride: postgresql
+primary:
+  existingConfigmap: postgresql-conf
+  initdb:
+    scripts:
+      grant_superuser.sh: |
+        #!/bin/sh
+        export PGPASSWORD=$POSTGRES_POSTGRES_PASSWORD
+        psql -U postgres -c 'alter role "user" superuser;'
+  persistence:
+    size: 2Gi
