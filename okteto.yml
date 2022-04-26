@@ -9,6 +9,6 @@ volumes:
 - /go/pkg/
 - /root/.cache/go-build/
 sync:
-- ./wal-listener:/usr/src/app
+- .:/usr/src/app
 forward:
 - 2345:2345

@@ -1,22 +1,91 @@
 # pgwalstreams
 
-Event sourcing events from Postgresql database to Nats Jetstreams in kubernetes with [wal-listener](https://github.com/ihippik/wal-listener)
+Event sourcing from Postgresql database to Nats Jetstreams in kubernetes with [wal-listener](https://github.com/ihippik/wal-listener):
+
+## Overview
+
+A service that helps implement the **Event-driven architecture**.
+
+To maintain the consistency of data in the system, we will use **transactional messaging** - 
+publishing events in a single transaction with a domain model change.
+
+The service allows you to subscribe to changes in the PostgreSQL database using its logical decoding capability 
+and publish them to the NATS Jetstreams server.
+
+### Logic of work
+To receive events about data changes in our PostgreSQL DB
+  we use the standard logic decoding module (**pgoutput**) This module converts
+ changes read from the WAL into a logical replication protocol.
+  And we already consume all this information on our side.
+Then we filter out only the events we need and publish them in the queue
+
+### Event publishing
+
+NATS Jetstreams is used as a message broker.
+Service publishes the following structure.
+The name of the topic for subscription to receive messages is formed from:
+* the topic prefix
+* the name of the database
+* the name of the table
+* the action on the record
+
+Message structure: `prefix.schema_table.table.action`
+
+Example: `db.public.users.insert`
+
+```
+{
+	ID        uuid.UUID   # unique ID           
+	Schema    string                 
+	Table     string                 
+	Action    string                 
+	Data      map[string]interface{} 
+	EventTime time.Time   # commit time          
+}
+```
+
+### Filter configuration example
+
+```yaml
+database:
+  filter:
+    tables:
+      users:
+        - insert
+        - update
+
+```
+This filter means that we only process events occurring with the `users` table, 
+and in particular `insert` and `update` data.
+
+Filter tables from postgresql events is updated when `database.filter` config is updated via k8s configmap / docker-compose volume.
+
+### DB setting
+You must make the following settings in the db configuration (postgresql.conf)
+* wal_level >= “logical”
+* max_replication_slots >= 1
+
+The publication & slot created automatically when the service starts (for all tables and all actions). 
+You can delete the default publication and create your own (name: _wal-listener_) with the necessary filtering conditions, and then the filtering will occur at the database level and not at the application level.
+
+https://www.postgresql.org/docs/current/sql-createpublication.html
+
+If you change the publication, do not forget to change the slot name or delete the current one.
 
 ## Tutorial
 
 ### Requirements
 
-* kubectl
-* k3d
-* helm
-* okteto [optional]
+* [kubectl](https://kubernetes.io/docs/reference/kubectl/kubectl/)
+* [k3d](https://k3d.io/v5.4.1/) / [kind](https://kind.sigs.k8s.io/)
+* [helm](https://helm.sh/)
 
 ### Deploy
 
 * Start local k8s:
 
 ```bash
-k3d cluster create -c k3d.yaml
+k3d cluster create -c deploy/k8s/k3d.yaml
 export KUBECONFIG=$(k3d kubeconfig write poc)
 kubectl cluster-info
 ```
@@ -32,30 +101,30 @@ helm repo update
 * Create postgresql resouces:
 
 ```bash
-kubectl create configmap postgresql-conf --from-file=postgresql/postgresql.conf
-helm upgrade --install postgres -f k8s/postgres-values.yaml bitnami/postgresql
+kubectl create configmap postgresql-conf --from-file=deploy/postgresql/postgresql.conf
+helm upgrade --install postgres -f deploy/k8s/postgres-values.yaml bitnami/postgresql
 ```
 
 * Create nats resouces:
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/nats-io/nack/v0.6.0/deploy/crds.yml
-helm upgrade --install nats -f k8s/nats-values.yaml nats/nats
-helm upgrade --install nack -f k8s/nack-values.yaml nats/nack
+helm upgrade --install nats -f deploy/k8s/nats-values.yaml nats/nats
+helm upgrade --install nack -f deploy/k8s/nack-values.yaml nats/nack
 ```
 
 * Create pgwalstreams resouces:
 
 ```bash
-kubectl apply -f k8s/pgwalstreams.yaml
+kubectl apply -f deploy/k8s/pgwalstreams.yaml
 ```
 
 ### Develop
 
-* Start dev container with hot-reload:
+* Start dev container with hot-reload using [okteto](https://www.okteto.com/):
 
 ```bash
-okteto up -f okteto.yml
+okteto up
 ```
 
 ### Test
@@ -94,7 +163,7 @@ EOF
 * Adds new records to the database tables
 
 ```bash
-kubectl exec -ti pod/postgresql-0 -- bash -c 'PGPASSWORD=$POSTGRES_POSTGRES_PASSWORD psql -U postgres -p 5432 -d app' < postgresql/init.sql
+kubectl exec -ti pod/postgresql-0 -- bash -c 'PGPASSWORD=$POSTGRES_POSTGRES_PASSWORD psql -U postgres -p 5432 -d app' < deploy/postgresql/init.sql
 ```
 
 * Check pgwalstreams logs
@@ -108,11 +177,6 @@ kubectl logs deployment.apps/pgwalstreams
 ```bash
 kubectl exec -it deploy/nats-box -- /bin/sh -l
 nats-box:~# nats consumer next db public-users
-```
-
-```bash
-kubectl delete stream db
-kubectl delete consumer public-users
 ```
 
 * Monitoring:
@@ -147,9 +211,9 @@ EOF
 ```
 
 ```bash
-echo "172.18.0.2 nats.k8s.local" | sudo tee -a /etc/hosts
+echo "127.0.0.1 nats.k8s.local" | sudo tee -a /etc/hosts
 
-firefox nats.k8s.local
+firefox http://nats.k8s.local:8080/
 ```
 
 ## License
